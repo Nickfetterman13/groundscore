@@ -129,7 +129,7 @@ export default async function FestivalPage({
               title={`${festival.full_name} playlist`}
             />
             <p className="mt-3 text-xs text-[#A8A29E]">
-              tap the heart in the embed to save this playlist to your spotify library.
+              tap the heart in the player to save this playlist to your spotify library.
             </p>
           </section>
         ) : null}
