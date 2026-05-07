@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import { supabase, type Festival, type Artist, type LineupWithArtist } from '@/lib/supabase'
+import { supabase, type Festival, type ArtistSummary, type LineupWithArtist } from '@/lib/supabase'
 
 const getFestival = cache(async (slug: string): Promise<Festival | null> => {
   const { data } = await supabase
@@ -16,10 +16,11 @@ const getFestival = cache(async (slug: string): Promise<Festival | null> => {
 const getLineups = cache(async (festivalId: string): Promise<LineupWithArtist[]> => {
   const { data } = await supabase
     .from('lineups')
-    .select('*, artists(*)')
+    .select('*, artist:artist_id(id, name, spotify_url, soundcloud_url), partner:b2b_partner_id(id, name, spotify_url, soundcloud_url)')
     .eq('festival_id', festivalId)
     .order('day_order', { ascending: true })
     .order('stage', { ascending: true })
+    .order('display_order', { ascending: true })
   return (data ?? []) as LineupWithArtist[]
 })
 
@@ -84,13 +85,15 @@ export default async function FestivalPage({
     (a, b) => a[1].day_order - b[1].day_order
   )
 
-  // Unique artists with no Spotify URL, for the callout at the bottom
+  // Unique artists (primary + b2b partner) with no Spotify URL
   const seenIds = new Set<string>()
-  const noSpotify: Artist[] = []
+  const noSpotify: ArtistSummary[] = []
   for (const row of lineups) {
-    if (!row.artists.spotify_url && !seenIds.has(row.artists.id)) {
-      seenIds.add(row.artists.id)
-      noSpotify.push(row.artists)
+    for (const a of [row.artist, row.partner]) {
+      if (a && !a.spotify_url && !seenIds.has(a.id)) {
+        seenIds.add(a.id)
+        noSpotify.push(a)
+      }
     }
   }
   noSpotify.sort((a, b) => a.name.localeCompare(b.name))
@@ -146,34 +149,64 @@ export default async function FestivalPage({
                 {day}
               </h2>
 
-              {[...stages.entries()].map(([stage, rows]) => (
-                <div key={stage} className="mb-6">
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-[#A8A29E] block mb-2">
-                    {stage}
-                  </span>
-                  <ul className="space-y-1.5">
-                    {rows
-                      .slice()
-                      .sort((a, b) => a.artists.name.localeCompare(b.artists.name))
-                      .map((row) => (
-                        <li key={row.id} className="text-sm leading-snug">
-                          {row.artists.spotify_url ? (
-                            <a
-                              href={row.artists.spotify_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[#F5F2EC] hover:underline underline-offset-2 decoration-[#4C1D95]"
-                            >
-                              {row.artists.name}
-                            </a>
-                          ) : (
-                            <span className="text-[#F5F2EC]">{row.artists.name}</span>
-                          )}
-                        </li>
-                      ))}
-                  </ul>
-                </div>
-              ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {[...stages.entries()].map(([stage, rows]) => {
+                  const showcase = rows.find((r) => r.showcase)?.showcase ?? null
+                  return (
+                    <div key={stage}>
+                      <span className="font-mono text-[10px] uppercase tracking-widest text-[#A8A29E] block mb-1">
+                        {stage}
+                      </span>
+                      {showcase && (
+                        <span className="font-mono text-[10px] tracking-widest text-[#A8A29E] block mb-2 opacity-70">
+                          {showcase}
+                        </span>
+                      )}
+                      {!showcase && <span className="block mb-2" />}
+                      <ul className="space-y-1.5">
+                        {rows.map((row) => (
+                          <li key={row.id} className="text-sm leading-snug">
+                            {row.artist.spotify_url ? (
+                              <a
+                                href={row.artist.spotify_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#F5F2EC] hover:underline underline-offset-2 decoration-[#4C1D95]"
+                              >
+                                {row.artist.name}
+                              </a>
+                            ) : (
+                              <span className="text-[#F5F2EC]">{row.artist.name}</span>
+                            )}
+                            {row.partner && (
+                              <>
+                                <span className="font-mono text-[10px] text-[#A8A29E] mx-1">b2b</span>
+                                {row.partner.spotify_url ? (
+                                  <a
+                                    href={row.partner.spotify_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[#F5F2EC] hover:underline underline-offset-2 decoration-[#4C1D95]"
+                                  >
+                                    {row.partner.name}
+                                  </a>
+                                ) : (
+                                  <span className="text-[#F5F2EC]">{row.partner.name}</span>
+                                )}
+                              </>
+                            )}
+                            {row.notes && (
+                              <span className="font-mono text-[10px] text-[#A8A29E] ml-1">
+                                · {row.notes.toLowerCase()}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           ))}
         </section>
