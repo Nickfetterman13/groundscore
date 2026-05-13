@@ -125,7 +125,7 @@ export default async function FestivalPage({
             <iframe
               src={`https://open.spotify.com/embed/playlist/${festival.spotify_playlist_id}?theme=0`}
               width="100%"
-              height="380"
+              height="152"
               style={{ border: 'none', display: 'block' }}
               allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
               loading="lazy"
