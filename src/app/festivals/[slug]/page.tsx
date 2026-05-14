@@ -2,6 +2,7 @@ import { cache } from 'react'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { supabase, type Festival, type ArtistSummary, type LineupWithArtist } from '@/lib/supabase'
+import SubscribeForm from '@/components/SubscribeForm'
 
 const getFestival = cache(async (slug: string): Promise<Festival | null> => {
   const { data } = await supabase
@@ -236,6 +237,8 @@ export default async function FestivalPage({
             </p>
           </section>
         )}
+
+        <SubscribeForm source={slug} />
       </div>
     </main>
   )
