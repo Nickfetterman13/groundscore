@@ -168,7 +168,7 @@ export default async function FestivalPage({
                         {rows.map((row) => (
                           <li key={row.id} className="text-sm leading-snug">
                       {row.artist.spotify_url || row.artist.soundcloud_url ? (
-  
+  <a
    href={row.artist.spotify_url || row.artist.soundcloud_url}
     target="_blank"
     rel="noopener noreferrer"
