@@ -167,33 +167,33 @@ export default async function FestivalPage({
                       <ul className="space-y-1.5">
                         {rows.map((row) => (
                           <li key={row.id} className="text-sm leading-snug">
-                            {row.artist.spotify_url ? (
-                              <a
-                                href={row.artist.spotify_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[#F5F2EC] hover:underline underline-offset-2 decoration-[#4C1D95]"
-                              >
-                                {row.artist.name}
-                              </a>
-                            ) : (
-                              <span className="text-[#F5F2EC]">{row.artist.name}</span>
-                            )}
+                      {row.artist.spotify_url || row.artist.soundcloud_url ? (
+  
+   href={row.artist.spotify_url || row.artist.soundcloud_url}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-[#F5F2EC] hover:underline underline-offset-2 decoration-[#4C1D95]"
+  >
+    {row.artist.name}
+  </a>
+) : (
+  <span className="text-[#F5F2EC]">{row.artist.name}</span>
+)}
                             {row.partner && (
                               <>
                                 <span className="font-mono text-[10px] text-[#A8A29E] mx-1">b2b</span>
-                                {row.partner.spotify_url ? (
-                                  <a
-                                    href={row.partner.spotify_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[#F5F2EC] hover:underline underline-offset-2 decoration-[#4C1D95]"
-                                  >
-                                    {row.partner.name}
-                                  </a>
-                                ) : (
-                                  <span className="text-[#F5F2EC]">{row.partner.name}</span>
-                                )}
+                              {row.partner.spotify_url || row.partner.soundcloud_url ? (
+  
+    href={row.partner.spotify_url || row.partner.soundcloud_url}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-[#F5F2EC] hover:underline underline-offset-2 decoration-[#4C1D95]"
+  >
+    {row.partner.name}
+  </a>
+) : (
+  <span className="text-[#F5F2EC]">{row.partner.name}</span>
+)}
                               </>
                             )}
                             {row.notes && (
