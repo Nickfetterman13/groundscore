@@ -184,7 +184,7 @@ export default async function FestivalPage({
                                 <span className="font-mono text-[10px] text-[#A8A29E] mx-1">b2b</span>
                               {row.partner.spotify_url || row.partner.soundcloud_url ? (
   <a
-    href={row.partner.spotify_url || row.partner.soundcloud_url}
+   href={row.partner.spotify_url || row.partner.soundcloud_url || undefined}
     target="_blank"
     rel="noopener noreferrer"
     className="text-[#F5F2EC] hover:underline underline-offset-2 decoration-[#4C1D95]"
