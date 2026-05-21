@@ -169,7 +169,7 @@ export default async function FestivalPage({
                           <li key={row.id} className="text-sm leading-snug">
                       {row.artist.spotify_url || row.artist.soundcloud_url ? (
   <a
-   href={row.artist.spotify_url || row.artist.soundcloud_url}
+   href={row.artist.spotify_url || row.artist.soundcloud_url || undefined}
     target="_blank"
     rel="noopener noreferrer"
     className="text-[#F5F2EC] hover:underline underline-offset-2 decoration-[#4C1D95]"
