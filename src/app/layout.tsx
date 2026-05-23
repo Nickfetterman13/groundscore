@@ -17,6 +17,27 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "groundscore",
   description: "festival lineup → spotify playlist.",
+  metadataBase: new URL("https://groundscore.fm"),
+  openGraph: {
+    title: "groundscore",
+    description: "find something good.",
+    url: "https://groundscore.fm",
+    type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "groundscore",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "groundscore",
+    description: "find something good.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({
