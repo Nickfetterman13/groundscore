@@ -44,7 +44,7 @@ export default function SubscribeForm({ source }: { source: string }) {
       ) : (
         <>
           <p className="text-sm text-[#A8A29E] mb-4">
-            we&apos;ll email when set times drop.
+            get notified when new lineups drop.
           </p>
           <div className="flex gap-2">
             <input

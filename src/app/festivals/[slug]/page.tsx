@@ -146,7 +146,7 @@ export default async function FestivalPage({
 
           {sortedDays.map(([day, { stages }]) => (
             <div key={day} className="mb-10">
-              <h2 className="font-mono text-xs uppercase tracking-widest text-[#F5F2EC] border-b border-[#1F1F1F] pb-2 mb-5">
+              <h2 className="font-mono text-base uppercase tracking-widest text-[#F5F2EC] border-b border-[#1F1F1F] pb-2 mb-5">
                 {day}
               </h2>
 
