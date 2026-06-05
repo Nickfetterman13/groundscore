@@ -127,5 +127,5 @@ export async function POST(req: Request) {
     return Response.json({ error: `Failed to insert lineup: ${lineupError.message}` }, { status: 500 })
   }
 
-  return Response.json({ ok: true })
+  return Response.json({ ok: true, count: lineupInserts.length })
 }

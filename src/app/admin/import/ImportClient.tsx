@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import ArtistSearch, { type ArtistOption } from './ArtistSearch'
 import type { Festival } from '@/lib/supabase'
 
@@ -114,8 +113,14 @@ const EMPTY_NEW_FESTIVAL: NewFestivalFields = {
 
 // ——— Component ———
 
+interface ImportResult {
+  count: number
+  festivalName: string
+  festivalSlug: string
+  isPublished: boolean
+}
+
 export default function ImportClient({ festivals: initialFestivals }: { festivals: Festival[] }) {
-  const router = useRouter()
   const [step, setStep] = useState<1 | 2 | 3>(1)
 
   // Step 1 state
@@ -135,6 +140,9 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
   const [rows, setRows] = useState<LineupRow[]>([])
   const [importError, setImportError] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
+
+  // Success state
+  const [importResult, setImportResult] = useState<ImportResult | null>(null)
 
   // ——— Step 1 ———
 
@@ -267,7 +275,22 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
       return
     }
 
-    router.push(`/festivals/${selectedFestival.slug}`)
+    const { count } = await res.json()
+    setImportResult({
+      count,
+      festivalName: selectedFestival.full_name,
+      festivalSlug: selectedFestival.slug,
+      isPublished: selectedFestival.is_published,
+    })
+    setRows([])
+    setRawText('')
+    setImporting(false)
+  }
+
+  function handleImportAnother() {
+    setImportResult(null)
+    setSelectedFestival(null)
+    setStep(1)
   }
 
   // ——— Derived ———
@@ -285,8 +308,40 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
   return (
     <div>
 
+      {/* ── Success state ── */}
+      {importResult && (
+        <section className="max-w-lg">
+          <p className="font-mono text-xs text-[#4C1D95] uppercase tracking-widest mb-4">
+            import complete
+          </p>
+          <p className="text-[#F5F2EC] text-sm mb-6">
+            Imported <span className="font-bold">{importResult.count}</span> billing{importResult.count !== 1 ? 's' : ''} to <span className="font-bold">{importResult.festivalName}</span>.
+          </p>
+
+          {!importResult.isPublished && (
+            <p className="font-mono text-[10px] text-[#A8A29E] mb-6">
+              Festival is unpublished. Publish it from Supabase to make it visible.
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-3">
+            {importResult.isPublished && (
+              <a
+                href={`/festivals/${importResult.festivalSlug}`}
+                className={btnPrimary}
+              >
+                view festival page →
+              </a>
+            )}
+            <button onClick={handleImportAnother} className={btnPrimary}>
+              import another lineup
+            </button>
+          </div>
+        </section>
+      )}
+
       {/* ── Step 1: Festival selector ── */}
-      {step === 1 && (
+      {!importResult && step === 1 && (
         <section>
           <p className={labelCls}>1 — select festival</p>
 
@@ -449,7 +504,7 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
       )}
 
       {/* ── Step 2: Paste lineup ── */}
-      {step === 2 && selectedFestival && (
+      {!importResult && step === 2 && selectedFestival && (
         <section>
           <div className="flex items-center gap-3 mb-6">
             <button
@@ -484,7 +539,7 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
       )}
 
       {/* ── Step 3: Preview table ── */}
-      {step === 3 && selectedFestival && (
+      {!importResult && step === 3 && selectedFestival && (
         <section>
           <div className="flex items-center gap-3 mb-6">
             <button
