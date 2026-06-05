@@ -74,6 +74,15 @@ function parseLines(text: string): LineupRow[] {
     .map(l => emptyRow(l))
 }
 
+function toSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 function generateDays(start: string, end: string): DayOption[] {
   const s = new Date(start + 'T12:00:00Z')
   const e = new Date(end + 'T12:00:00Z')
@@ -116,6 +125,7 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
   const [newFest, setNewFest] = useState<NewFestivalFields>(EMPTY_NEW_FESTIVAL)
   const [newFestError, setNewFestError] = useState<string | null>(null)
   const [newFestLoading, setNewFestLoading] = useState(false)
+  const [slugUserEdited, setSlugUserEdited] = useState(false)
 
   // Step 2 state
   const [rawText, setRawText] = useState('')
@@ -144,6 +154,18 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
   async function handleCreateFestival() {
     setNewFestLoading(true)
     setNewFestError(null)
+
+    const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+    if (!SLUG_RE.test(newFest.slug)) {
+      setNewFestError('Slug must be lowercase letters, numbers, and dashes only')
+      setNewFestLoading(false)
+      return
+    }
+    if (festivals.some(f => f.slug.toLowerCase() === newFest.slug.toLowerCase())) {
+      setNewFestError(`Slug "${newFest.slug}" is already taken`)
+      setNewFestLoading(false)
+      return
+    }
 
     const body: Record<string, unknown> = {
       name: newFest.name,
@@ -176,6 +198,7 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
     setSelectedFestival(created)
     setShowNewForm(false)
     setNewFest(EMPTY_NEW_FESTIVAL)
+    setSlugUserEdited(false)
     setNewFestLoading(false)
     setStep(2)
   }
@@ -303,6 +326,7 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
                       ...p,
                       name: e.target.value,
                       full_name: p.full_name || e.target.value,
+                      slug: slugUserEdited ? p.slug : toSlug(e.target.value),
                     }))}
                   />
                 </div>
@@ -311,7 +335,10 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
                   <input
                     className={inputCls}
                     value={newFest.slug}
-                    onChange={e => setNewFest(p => ({ ...p, slug: e.target.value }))}
+                    onChange={e => {
+                      setSlugUserEdited(true)
+                      setNewFest(p => ({ ...p, slug: e.target.value }))
+                    }}
                     placeholder="awakenings-2026"
                   />
                 </div>
@@ -410,7 +437,7 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
                   {newFestLoading ? '...' : 'create festival'}
                 </button>
                 <button
-                  onClick={() => setShowNewForm(false)}
+                  onClick={() => { setShowNewForm(false); setSlugUserEdited(false) }}
                   className="font-mono text-[10px] text-[#A8A29E] hover:text-[#F5F2EC]"
                 >
                   cancel

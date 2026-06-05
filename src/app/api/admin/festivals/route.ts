@@ -27,6 +27,21 @@ export async function POST(req: Request) {
   const body = await req.json()
   const admin = adminClient()
 
+  const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+  if (!body.slug || !SLUG_RE.test(body.slug)) {
+    return Response.json({ error: 'Slug must be lowercase letters, numbers, and dashes only' }, { status: 400 })
+  }
+
+  const { data: existing } = await admin
+    .from('festivals')
+    .select('id')
+    .ilike('slug', body.slug)
+    .maybeSingle()
+
+  if (existing) {
+    return Response.json({ error: `Slug "${body.slug}" is already taken` }, { status: 400 })
+  }
+
   const { data, error } = await admin
     .from('festivals')
     .insert(body)
