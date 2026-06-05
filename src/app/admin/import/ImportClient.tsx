@@ -7,11 +7,14 @@ import type { Festival } from '@/lib/supabase'
 
 // ——— Types ———
 
+type MatchStatus = 'existing' | 'new' | 'ambiguous'
+
 interface LineupRow {
   key: string
   displayName: string
   artist: ArtistOption | null
   isNewArtist: boolean
+  matchStatus: MatchStatus
   hasB2B: boolean
   b2bArtist: ArtistOption | null
   isNewB2BArtist: boolean
@@ -51,6 +54,7 @@ function emptyRow(displayName = ''): LineupRow {
     displayName,
     artist: null,
     isNewArtist: false,
+    matchStatus: 'new',
     hasB2B: false,
     b2bArtist: null,
     isNewB2BArtist: false,
@@ -115,6 +119,7 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
 
   // Step 2 state
   const [rawText, setRawText] = useState('')
+  const [parsing, setParsing] = useState(false)
 
   // Step 3 state
   const [rows, setRows] = useState<LineupRow[]>([])
@@ -177,8 +182,35 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
 
   // ——— Step 2 ———
 
-  function handleParse() {
-    setRows(parseLines(rawText))
+  async function handleParse() {
+    setParsing(true)
+    const parsed = parseLines(rawText)
+    const names = parsed.map(r => r.displayName)
+
+    let matchMap: Record<string, { id: string; name: string }[]> = {}
+    try {
+      const res = await fetch('/api/admin/artists/batch-match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ names }),
+      })
+      if (res.ok) matchMap = await res.json()
+    } catch { /* network failure — treat all as new */ }
+
+    const linked: LineupRow[] = parsed.map(r => {
+      const key = r.displayName.trim().toLowerCase()
+      const matches = matchMap[key] ?? []
+      if (matches.length === 1) {
+        return { ...r, artist: matches[0], isNewArtist: false, matchStatus: 'existing' as const }
+      } else if (matches.length >= 2) {
+        return { ...r, artist: null, isNewArtist: false, matchStatus: 'ambiguous' as const }
+      } else {
+        return { ...r, artist: { id: '', name: r.displayName.trim() }, isNewArtist: true, matchStatus: 'new' as const }
+      }
+    })
+
+    setRows(linked)
+    setParsing(false)
     setStep(3)
   }
 
@@ -221,11 +253,9 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
     ? generateDays(selectedFestival.start_date, selectedFestival.end_date)
     : []
 
-  const newNames = new Set<string>()
-  rows.forEach(r => {
-    if (r.isNewArtist && r.artist) newNames.add(r.artist.name.toLowerCase())
-    if (r.hasB2B && r.isNewB2BArtist && r.b2bArtist) newNames.add(r.b2bArtist.name.toLowerCase())
-  })
+  const existingCount = rows.filter(r => r.matchStatus === 'existing').length
+  const newCount = rows.filter(r => r.matchStatus === 'new').length
+  const ambiguousCount = rows.filter(r => r.matchStatus === 'ambiguous').length
 
   // ——— Render ———
 
@@ -417,10 +447,10 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
           <div className="mt-4">
             <button
               onClick={handleParse}
-              disabled={!rawText.trim()}
+              disabled={!rawText.trim() || parsing}
               className={btnPrimary}
             >
-              parse →
+              {parsing ? 'detecting…' : 'parse →'}
             </button>
           </div>
         </section>
@@ -443,9 +473,11 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
 
           {/* Counter */}
           <p className="font-mono text-[10px] text-[#A8A29E] mb-4">
-            <span className="text-[#F5F2EC]">{rows.length}</span> billing{rows.length !== 1 ? 's' : ''}
-            {newNames.size > 0 && (
-              <> · <span className="text-[#4C1D95]">{newNames.size} new</span></>
+            <code className="text-[#F5F2EC]">{existingCount}</code> existing
+            {' · '}
+            <code className="text-[#4C1D95]">{newCount}</code> new
+            {ambiguousCount > 0 && (
+              <> · <code className="text-amber-400">{ambiguousCount}</code> ambiguous</>
             )}
           </p>
 
@@ -479,11 +511,27 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
               </thead>
               <tbody>
                 {rows.map((row, idx) => (
-                  <tr key={row.key} className="border-b border-[#1F1F1F] hover:bg-[#0d0d0d]">
+                  <tr
+                    key={row.key}
+                    className={[
+                      'border-b border-[#1F1F1F]',
+                      row.matchStatus === 'ambiguous'
+                        ? 'bg-amber-950/20 hover:bg-amber-950/30'
+                        : 'hover:bg-[#0d0d0d]',
+                    ].join(' ')}
+                  >
 
-                    {/* Position */}
+                    {/* Position + status */}
                     <td className="py-1.5 pl-3 pr-2">
-                      <span className="font-mono text-[10px] text-[#A8A29E]">{idx + 1}</span>
+                      <div className="flex flex-col items-start leading-none gap-0.5">
+                        <span className="font-mono text-[10px] text-[#A8A29E]">{idx + 1}</span>
+                        {row.matchStatus === 'new' && (
+                          <span className="font-mono text-[8px] text-[#4C1D95]">NEW</span>
+                        )}
+                        {row.matchStatus === 'ambiguous' && (
+                          <span className="font-mono text-[8px] text-amber-400">AMB</span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Display name */}
@@ -498,11 +546,17 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
 
                     {/* Artist */}
                     <td className="py-1.5 px-2">
-                      <ArtistSearch
-                        value={row.artist}
-                        isNew={row.isNewArtist}
-                        onChange={(a, isNew) => updateRow(row.key, { artist: a, isNewArtist: isNew })}
-                      />
+                      <div className={row.matchStatus === 'ambiguous' ? 'ring-1 ring-amber-500/50 rounded-sm' : ''}>
+                        <ArtistSearch
+                          value={row.artist}
+                          isNew={row.isNewArtist}
+                          onChange={(a, isNew) => updateRow(row.key, {
+                            artist: a,
+                            isNewArtist: isNew,
+                            matchStatus: a ? (isNew ? 'new' : 'existing') : 'new',
+                          })}
+                        />
+                      </div>
                     </td>
 
                     {/* B2B */}
@@ -616,9 +670,14 @@ export default function ImportClient({ festivals: initialFestivals }: { festival
 
           {/* Import button */}
           <div className="mt-6 pb-16">
+            {ambiguousCount > 0 && (
+              <p className="font-mono text-[10px] text-amber-400 mb-3">
+                resolve {ambiguousCount} ambiguous row{ambiguousCount !== 1 ? 's' : ''} before importing
+              </p>
+            )}
             <button
               onClick={handleImport}
-              disabled={importing || rows.length === 0}
+              disabled={importing || rows.length === 0 || ambiguousCount > 0}
               className={btnPrimary}
             >
               {importing ? 'importing…' : `import ${rows.length} billing${rows.length !== 1 ? 's' : ''} →`}
