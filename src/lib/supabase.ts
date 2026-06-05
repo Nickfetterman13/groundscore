@@ -34,6 +34,7 @@ export type Lineup = {
   day: string | null
   day_order: number | null
   display_order: number
+  display_name: string | null
   stage: string | null
   showcase: string | null
   set_time: string | null
