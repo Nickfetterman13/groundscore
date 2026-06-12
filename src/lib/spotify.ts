@@ -67,3 +67,39 @@ export function toCandidate(item: SpotifyArtistItem): SpotifyArtistCandidate {
     externalUrl: item.external_urls?.spotify ?? null,
   }
 }
+
+export interface SpotifyArtistMetadata {
+  spotify_id: string
+  followers: number | null
+  popularity: number | null
+  genres: string[]
+  image_url: string | null
+}
+
+// Fetches up to 50 artists in one call. Spotify returns `null` in the array
+// for any id it doesn't recognize, so those are filtered out.
+export async function getArtistsMetadata(spotifyIds: string[]): Promise<SpotifyArtistMetadata[]> {
+  if (spotifyIds.length === 0) return []
+
+  const token = await getSpotifyToken()
+
+  const res = await fetch(`https://api.spotify.com/v1/artists?ids=${spotifyIds.join(',')}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+
+  if (!res.ok) {
+    throw new Error(`Spotify artists request failed: ${res.status}`)
+  }
+
+  const data: { artists: (SpotifyArtistItem | null)[] } = await res.json()
+
+  return (data.artists ?? [])
+    .filter((item): item is SpotifyArtistItem => item != null)
+    .map(item => ({
+      spotify_id: item.id,
+      followers: item.followers?.total ?? null,
+      popularity: item.popularity ?? null,
+      genres: item.genres ?? [],
+      image_url: item.images?.[0]?.url ?? null,
+    }))
+}

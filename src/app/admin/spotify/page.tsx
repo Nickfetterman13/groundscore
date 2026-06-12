@@ -1,5 +1,6 @@
 import { verifyAuth } from '@/lib/adminAuth'
 import SpotifyClient from './SpotifyClient'
+import BackfillPanel from './BackfillPanel'
 import PasswordGate from './PasswordGate'
 
 export const metadata = {
@@ -31,6 +32,11 @@ export default async function SpotifyPage() {
           <h1 className="font-sans font-extrabold text-3xl tracking-tight">spotify matcher</h1>
         </header>
         <SpotifyClient />
+
+        <section className="mt-12 pt-8 border-t border-[#1F1F1F]">
+          <h2 className="font-sans font-extrabold text-2xl tracking-tight mb-6">backfill metadata</h2>
+          <BackfillPanel />
+        </section>
       </div>
     </main>
   )
