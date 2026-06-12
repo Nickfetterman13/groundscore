@@ -70,37 +70,38 @@ export function toCandidate(item: SpotifyArtistItem): SpotifyArtistCandidate {
 
 export interface SpotifyArtistMetadata {
   spotify_id: string
-  followers: number | null
-  popularity: number | null
-  genres: string[]
   image_url: string | null
 }
 
-// Fetches up to 50 artists in one call. Spotify returns `null` in the array
-// for any id it doesn't recognize, so those are filtered out.
+// Fetches each artist individually — our tier gets 403 on the batch
+// GET /v1/artists?ids= endpoint. Sequential awaited calls (not Promise.all)
+// to avoid hammering the rate limit. A 404 means the id is unknown to
+// Spotify, so it's skipped rather than treated as an error.
 export async function getArtistsMetadata(spotifyIds: string[]): Promise<SpotifyArtistMetadata[]> {
   if (spotifyIds.length === 0) return []
 
   const token = await getSpotifyToken()
 
-  const res = await fetch(`https://api.spotify.com/v1/artists?ids=${spotifyIds.join(',')}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  const results: SpotifyArtistMetadata[] = []
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    throw new Error(`Spotify artists request failed: ${res.status} — ${body}`)
+  for (const id of spotifyIds) {
+    const res = await fetch(`https://api.spotify.com/v1/artists/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    if (res.status === 404) continue
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      throw new Error(`Spotify artists request failed: ${res.status} — ${body}`)
+    }
+
+    const item: SpotifyArtistItem = await res.json()
+    results.push({
+      spotify_id: item.id,
+      image_url: item.images?.[0]?.url ?? null,
+    })
   }
 
-  const data: { artists: (SpotifyArtistItem | null)[] } = await res.json()
-
-  return (data.artists ?? [])
-    .filter((item): item is SpotifyArtistItem => item != null)
-    .map(item => ({
-      spotify_id: item.id,
-      followers: item.followers?.total ?? null,
-      popularity: item.popularity ?? null,
-      genres: item.genres ?? [],
-      image_url: item.images?.[0]?.url ?? null,
-    }))
+  return results
 }

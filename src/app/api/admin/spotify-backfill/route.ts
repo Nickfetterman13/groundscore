@@ -91,9 +91,6 @@ export async function POST(req: Request) {
         .from('artists')
         .update({
           spotify_id: meta.spotify_id,
-          followers: meta.followers,
-          popularity: meta.popularity,
-          genres: meta.genres,
           image_url: meta.image_url,
         })
         .eq('id', row.id)
