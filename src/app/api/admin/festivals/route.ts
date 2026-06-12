@@ -19,6 +19,21 @@ async function verifyAuth(): Promise<boolean> {
   }
 }
 
+export async function GET() {
+  if (!(await verifyAuth())) {
+    return Response.json({ error: 'unauthorized' }, { status: 401 })
+  }
+
+  const admin = adminClient()
+  const { data, error } = await admin
+    .from('festivals')
+    .select('id, name, slug')
+    .order('name')
+
+  if (error) return Response.json({ error: error.message }, { status: 500 })
+  return Response.json({ festivals: data ?? [] })
+}
+
 export async function POST(req: Request) {
   if (!(await verifyAuth())) {
     return Response.json({ error: 'unauthorized' }, { status: 401 })

@@ -21,6 +21,12 @@ export type Artist = {
   name: string
   spotify_url: string | null
   soundcloud_url: string | null
+  spotify_id: string | null
+  followers: number | null
+  popularity: number | null
+  genres: string[] | null
+  image_url: string | null
+  not_on_spotify: boolean | null
   created_at: string
 }
 
