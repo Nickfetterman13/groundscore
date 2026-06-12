@@ -88,7 +88,8 @@ export async function getArtistsMetadata(spotifyIds: string[]): Promise<SpotifyA
   })
 
   if (!res.ok) {
-    throw new Error(`Spotify artists request failed: ${res.status}`)
+    const body = await res.text().catch(() => '')
+    throw new Error(`Spotify artists request failed: ${res.status} — ${body}`)
   }
 
   const data: { artists: (SpotifyArtistItem | null)[] } = await res.json()
